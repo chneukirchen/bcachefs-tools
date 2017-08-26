@@ -66,7 +66,8 @@ static void usage(void)
 	     "Debug:\n"
 	     "These commands work on offline, unmounted filesystems\n"
 	     "  dump             Dump filesystem metadata to a qcow2 image\n"
-	     "  list             List filesystem metadata in textual form\n");
+	     "  list             List filesystem metadata in textual form\n"
+	     "  frag-analyze     Analyze file fragmentation\n");
 }
 
 static char *full_cmd;
@@ -168,6 +169,8 @@ int main(int argc, char *argv[])
 		return cmd_dump(argc, argv);
 	if (!strcmp(cmd, "list"))
 		return cmd_list(argc, argv);
+	if (!strcmp(cmd, "frag-analyze"))
+		return cmd_frag_analyze(argc, argv);
 
 	printf("Unknown command %s\n", cmd);
 	usage();

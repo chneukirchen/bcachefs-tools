@@ -86,10 +86,15 @@ typedef darray(struct range) ranges;
 
 static inline void range_add(ranges *data, u64 offset, u64 size)
 {
-	darray_append(*data, (struct range) {
-		.start = offset,
-		.end = offset + size
-	});
+	if (data->size &&
+	    data->item[data->size - 1].end == offset) {
+		data->item[data->size - 1].end += size;
+	} else {
+		darray_append(*data, (struct range) {
+			.start = offset,
+			.end = offset + size
+		});
+	}
 }
 
 void ranges_sort_merge(ranges *);

@@ -39,4 +39,6 @@ int cmd_list(int argc, char *argv[]);
 int cmd_migrate(int argc, char *argv[]);
 int cmd_migrate_superblock(int argc, char *argv[]);
 
+int cmd_frag_analyze(int argc, char *argv[]);
+
 #endif /* _CMDS_H */

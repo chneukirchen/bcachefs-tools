@@ -328,3 +328,82 @@ int cmd_list(int argc, char *argv[])
 	bch2_fs_stop(c);
 	return 0;
 }
+
+int cmd_frag_analyze(int argc, char *argv[])
+{
+	ranges extents = { NULL };
+	char *line = NULL;
+	size_t len = 0;
+	bool sort = false;
+	int opt;
+
+	while ((opt = getopt(argc, argv, "s")) != -1)
+		switch (opt) {
+		case 's':
+			sort = true;
+			break;
+		}
+
+	while (getline(&line, &len, stdin) != -1) {
+		char *p = strchr(line, '\n');
+		if (p)
+			*p = 0;
+
+		int fd = open(line, O_RDONLY);
+		if (fd < 0) {
+			fprintf(stderr, "cannot open %s: %m\n", line);
+			continue;
+		}
+
+		struct fiemap_iter iter;
+		struct fiemap_extent e;
+
+		fiemap_for_each(fd, iter, e) {
+			if (e.fe_flags & (FIEMAP_EXTENT_UNKNOWN|
+					  FIEMAP_EXTENT_DATA_INLINE))
+				continue;
+
+			range_add(&extents,
+				  e.fe_physical >> 10,
+				  e.fe_length >> 10);
+		}
+
+		close(fd);
+	}
+
+	if (sort)
+		ranges_sort_merge(&extents);
+
+	printf("           start             end             gap\n");
+	unsigned nr_gaps = 0;
+	u64 gap_total = 0;
+	u64 data_total = 0;
+
+	struct range *i;
+	darray_foreach(i, extents) {
+		s64 gap = 0;
+
+		if (i + 1 < extents.item + extents.size)
+			gap = i[1].start > i[0].start
+				? i[1].start - i[0].end
+				: i[0].start - i[1].end;
+
+		if (gap < 0)
+			gap = -gap;
+
+		nr_gaps		+= gap != 0;
+		gap_total	+= gap;
+		data_total	+= i->end - i->start;
+
+		printf("%16llu %15llu %15llu\n", i->start, i->end, gap);
+	}
+
+	darray_free(extents);
+
+	printf("nr gaps %u avg gap %llu avg data %llu\n",
+	       nr_gaps,
+	       nr_gaps ? gap_total / nr_gaps : 0,
+	       data_total / (nr_gaps + 1));
+
+	return 0;
+}
