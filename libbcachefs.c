@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/statfs.h>
 #include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <time.h>
@@ -655,6 +656,12 @@ struct bchfs_handle bcache_fs_open(const char *path)
 	} else {
 		/* It's a path: */
 		ret.ioctl_fd = xopen(path, O_RDONLY);
+
+		struct statfs statfs;
+		if (fstatfs(ret.ioctl_fd, &statfs) < 0)
+			die("fstatfs failed: %s: %m", path);
+		if (statfs.f_type != BCACHEFS_STATFS_MAGIC)
+			die("%s is not a bcachefs filesystem", path);
 
 		struct bch_ioctl_query_uuid uuid;
 		xioctl(ret.ioctl_fd, BCH_IOCTL_QUERY_UUID, &uuid);
